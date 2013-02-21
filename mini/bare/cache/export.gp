@@ -12,6 +12,6 @@ unset key
 
 set grid
 
-plot "results/run2" using 1:2 title '64 MB Step' w lines
+plot "results/run12" using 1:2 title '64 MB Step' w lines
 #	"g2" using 1:3 title '50 MB Step' w lines, \
 #	"g3" using 1:3 title '32 MB Step' w lines

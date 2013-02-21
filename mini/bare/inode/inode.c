@@ -8,7 +8,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-#define SIZE 4096
+#define BLOCK_SIZE 4096
 #define OUTPUT 512
 
 unsigned long long int rdtsc(){
@@ -27,7 +27,7 @@ main(int argc, const char *argv[]){
 	}
 
 	unsigned long long tick_start, tick_stop;
-	char buffer[SIZE];
+	char buffer[BLOCK_SIZE];
 	char output[OUTPUT];
 
 	double freq =  2.8 * pow(10.0, 9);
@@ -42,28 +42,33 @@ main(int argc, const char *argv[]){
 
 	// loop through the buffer making it 4096 (1 block) long	
 /*	int k = 0;
-	for(k; k < SIZE; k++){
+	for(k; k < BLOCK_SIZE; k++){
 		buffer[k] = 'a';
 	}
 */
 
 	int data = open("../data", O_RDONLY);
+	read(data, buffer, BLOCK_SIZE);
 
 	int i = 0;
 	for(i; i < 16; i++){
+		// read in data to be written out
 
-		read(data, buffer, SIZE);
+		lseek(fd, 0, SEEK_SET);
 
 		tick_start = rdtsc();
-		write(fd, buffer, SIZE);
+		int k = 0;
+		for(k; k < (i+1); k++){
+			write(fd, buffer, BLOCK_SIZE);
+		}
 		fsync(fd);
 		tick_stop = rdtsc();
 
+		// result in microseconds
 		double time = ((tick_stop - tick_start) / freq) * pow(10.0, 6);
 		
 		// the output is which block was just written and how long it took
 		sprintf(output, "%3d %f\n", ((i+1)), time);
-//		printf("%s", output);
 		write(results, output, strlen(output));
 	}
 	close(fd);
