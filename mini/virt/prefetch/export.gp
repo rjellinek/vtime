@@ -12,5 +12,5 @@ set grid
 
 unset key
 
-plot "run10" using 1:2 w lines title 'Run 10'
+plot "results/run59" using 1:2 w lines title 'Run 10'
 #	"g3" using 1:2 w lines title 'Run 2'
