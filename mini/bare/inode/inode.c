@@ -10,6 +10,7 @@
 
 #define BLOCK_SIZE 4096
 #define OUTPUT 512
+#define MB 1048576
 
 unsigned long long int rdtsc(){
 
@@ -33,27 +34,22 @@ main(int argc, const char *argv[]){
 	double freq =  2.8 * pow(10.0, 9);
 
 	// file that needs to be open for writing to
-	int fd = open("creation", O_CREAT | O_WRONLY, 0644);
+	int fd = open("creation", O_CREAT | O_TRUNC | O_WRONLY, 0644);
 	
 	// file to output the results
 	char result_filename[14];
 	sprintf(result_filename, "results/run%d", atoi(argv[1]));
-	int results = open(result_filename, O_CREAT | O_RDWR, 0644);
-
-	// loop through the buffer making it 4096 (1 block) long	
-/*	int k = 0;
-	for(k; k < BLOCK_SIZE; k++){
-		buffer[k] = 'a';
-	}
-*/
+	int results = open(result_filename, O_CREAT | O_TRUNC | O_WRONLY, 0644);
 
 	int data = open("../data", O_RDONLY);
+
 	read(data, buffer, BLOCK_SIZE);
 
 	int i = 0;
 	for(i; i < 16; i++){
 		// read in data to be written out
 
+		ftruncate(fd, 0);
 		lseek(fd, 0, SEEK_SET);
 
 		tick_start = rdtsc();
@@ -64,8 +60,8 @@ main(int argc, const char *argv[]){
 		fsync(fd);
 		tick_stop = rdtsc();
 
-		// result in microseconds
-		double time = ((tick_stop - tick_start) / freq) * pow(10.0, 6);
+		// result in milliseconds
+		double time = ((tick_stop - tick_start) / freq) * pow(10.0, 3);
 		
 		// the output is which block was just written and how long it took
 		sprintf(output, "%3d %f\n", ((i+1)), time);
