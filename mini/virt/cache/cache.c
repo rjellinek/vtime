@@ -12,7 +12,7 @@
 
 
 #define SIZE 4096
-#define ITERATIONS 128
+#define ITERATIONS 190
 #define OUTPUT 64
 #define MB 1048576
 
