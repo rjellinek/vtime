@@ -32,31 +32,41 @@ main(int argc, const char *argv[]){
 	char buffer[BLOCK_SIZE];
 	char output[OUTPUT];
 
-	//double freq =  2.8 * pow(10.0, 9);
-    double freq = FREQ;
+    double freq =  2.8 * pow(10.0, 9);
 
 	// file to output the results
 	char result_filename[14];
 	sprintf(result_filename, "results/run%d", atoi(argv[1]));
 	int results = open(result_filename, O_CREAT | O_RDWR, 0644);
-
-	int rdfd = open("./file", O_RDONLY | O_SYNC | O_DIRECT);
-    struct stat *statbuf = malloc(sizeof(struct stat));
-    if (statbuf == NULL) {
-        fprintf(stderr, "Error: malloc statbuf\n\n");
-        exit(1);
-    }
-
-	int i = 0, j;
-	for(i; i < 16; i++){
+	int rdfd = open("/dev/urandom", O_RDONLY);
+    int wrfd = open("./outfile", O_CREAT | O_TRUNC | O_WRONLY | O_DIRECT, 0644);
+    int scratchfd = open("./scratch", O_CREAT | O_TRUNC | O_WRONLY | O_DIRECT, 0644);
+    //struct stat *statbuf = malloc(sizeof(struct stat));
+    
+	int i, j;
+	for(i = 0; i < 16; i++){
         
-        lseek(rdfd, 0, SEEK_SET);
-        fstat(rdfd, statbuf);
+        // write to start of the write file we're timing
+        lseek(wrfd, 0, SEEK_SET);
 
-		tick_start = rdtsc();
- //       for (j = 0; j <= i; j++) {
-            read(rdfd, buffer, BLOCK_SIZE);
- //       }
+        // read the random data we're going to write
+        read(rdfd, buffer, BLOCK_SIZE);
+
+        // write to some scratch file  -- necessary??
+        write(scratchfd, buffer, BLOCK_SIZE);
+        fsync(scratchfd);
+
+        // read into buffer again
+        read(rdfd, buffer, BLOCK_SIZE);
+	
+        // fill write buffer we care about
+        for (j = 0; j <= i; j++) {
+            write(wrfd, buffer, BLOCK_SIZE);
+        }
+
+        // time write
+        tick_start = rdtsc();
+		fsync(wrfd);
 		tick_stop = rdtsc();
 
 		// result in microseconds
@@ -65,8 +75,13 @@ main(int argc, const char *argv[]){
 		// the output is which block was just written and how long it took
 		sprintf(output, "%3d %f\n", ((i+1)), time);
 		write(results, output, strlen(output));
+		
+		// necessary?
+		fsync(results);
 	}
     //free(statbuf);
+    close(scratchfd);
 	close(results);
 	close(rdfd);
+	close(wrfd);
 }
