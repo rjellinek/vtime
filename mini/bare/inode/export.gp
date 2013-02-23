@@ -4,12 +4,10 @@ reset
 set terminal png
 
 set xlabel "Blocks Written"
-set ylabel "Time (micro seconds)"
+set ylabel "Time (milli seconds)"
 set title "Measuring What File Size Causes Indirection"
-
-set style data line
 
 set grid
 unset key
 
-plot "run7" using 1:3
+plot "results/combined" using 1:2

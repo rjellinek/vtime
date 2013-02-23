@@ -10,7 +10,6 @@
 
 #define BLOCK_SIZE 4096
 #define OUTPUT 512
-#define MB 1048576
 
 unsigned long long int rdtsc(){
 
@@ -40,16 +39,14 @@ main(int argc, const char *argv[]){
 	char result_filename[14];
 	sprintf(result_filename, "results/run%d", atoi(argv[1]));
 	int results = open(result_filename, O_CREAT | O_TRUNC | O_WRONLY, 0644);
-
-	int data = open("../data", O_RDONLY);
-
-	read(data, buffer, BLOCK_SIZE);
+	
+	memset(buffer, 'a', BLOCK_SIZE);
 
 	int i = 0;
 	for(i; i < 16; i++){
 		// read in data to be written out
 
-		ftruncate(fd, 0);
+		//ftruncate(fd, 0);
 		lseek(fd, 0, SEEK_SET);
 
 		tick_start = rdtsc();
@@ -60,8 +57,8 @@ main(int argc, const char *argv[]){
 		fsync(fd);
 		tick_stop = rdtsc();
 
-		// result in milliseconds
-		double time = ((tick_stop - tick_start) / freq) * pow(10.0, 3);
+		// result in microseconds
+		double time = ((tick_stop - tick_start) / freq) * pow(10.0, 6);
 		
 		// the output is which block was just written and how long it took
 		sprintf(output, "%3d %f\n", ((i+1)), time);
@@ -69,5 +66,4 @@ main(int argc, const char *argv[]){
 	}
 	close(fd);
 	close(results);
-	close(data);
 }
