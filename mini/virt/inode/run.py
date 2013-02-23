@@ -9,7 +9,7 @@ def parse_command_line():
 
 def main(argv=None):
 	args = parse_command_line()
-	iterations = 20
+	iterations = 1000
 	# number to start results output from, runX
 	# run1, run2, run3, etc...
 	initial = int(args.file_number) 
@@ -21,7 +21,10 @@ def main(argv=None):
 		# run the C code to actually time the filesystem
 		arg = "taskset -c 0 nice -20 ./inode %d" % i
 		os.system(arg)
-		os.system("rm -rf creation")
+		os.system("rm -f creation")
+	os.system("cat results/run* > results/combined")
+	os.system("rm -f combined.png")
+	os.system("./export.gp > combined.png")
 	return 0
 
 if __name__ == '__main__':
