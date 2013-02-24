@@ -63,12 +63,72 @@ always be attached to the word that preceded it, instead of going to the
 next line.
 
 \section{Methodology}
-Adam will get this.
 \subsection{Environment}
-\subsection{Buffer Size}
-\subsection{Prefetching}
-\subsection{File Cache}
+All experiments, both on bare metal and virtual, were run using 64-bit Ubuntu 12.04 (Linux 3.2.0-30-generic kernel) and the ext2 file system.
+The system used an Intel Core i5 2.8 GHz quad-core processor with Intel VT enabled and 6 GB of memory.
+Virtualization was done via KVM (Kernel-based Virtual Machine) which offers full virtualization of the x86 hardware.
+The virtual machine was configured with 6 GB of memory and a single processor.
+Additional memory was installed in the test machine to allow the virtual machine to have an equal amount of memory as the bare metal machine.
+Experiments on the virtual machine were run with an underlying test system that was equipped with 12 GB of memory.
+All experiments were implemented in C and identical between the bare and virtual environments. 
+The experiements were run with the taskset and nice commands in order to affinitize the experiment to a single CPU and set its priority as high as possible.
+The cache was dropped between runs of every experiment using the \texttt{drop\_caches} ability provided by the kernel.
+The ext2 file system was on a SATA connected 500 GB Western Digital Caviar Green drive. 
+The Caviar Green family of disks adjusts the speed of the drive in order to save power. 
+This power saving mode goes into effect after eight seconds of inactivity.
+The first run of every experiement was used to "wake up" the drive and was subsequently thrown out due to needing "spin-up" time. 
+
+\paragraph{}
+The timer used for all experiments was the time stamp counter which was accessed through the rdtsc instruction provided by the Intel instruction set. 
+This is called in C by designating the command as assembly. 
+The command allows access to the cycle count which was used to determine how many cycles it took for an operation to complete. 
+This does have the potential to introduce some noise since the CPU is not restricted to run at a fixed frequency. 
+Discarding the first run of every experiment helps minimize this inconsistency. 
+The timer was tested against the gettimeofday() command. 
+The test program slept for several seconds and both the time stamp counter and gettimeofday determined the same amount of sleep time. 
+Although, each core in a multi core processor has its own time stamp counter.
+Therefore, each experiment had to be affinitized to a single core to ensure the accuracy of the timing. 
+
+\subsection{Measuring the Ideal Buffer Size for Random Reads}
+
+In order to determine the ideal buffer size when performing random reads, reads of various sizes were performed and the times for each read were compared. 
+Since this measurement is essentially determining the block size, if bytes are read from the same block then they should have fast access times. 
+Once the file system needs to read from a new block it will have to fetch that block before returning the data. 
+Therefore, when the read time increases significantly it is the start of a new block.
+Reads were started from a block chosen randomly within the first 1000 blocks of the file and were done in reverse order to counteract prefetching. 
+Since the default page size for the Linux kernel is 4 KB, it is logical that the file system make this its basic unit for moving data. 
+Therefore we expected the ext2 block size to be 4096 bytes.
+
+\subsection{Measuring the Amount of Data Prefetched by the File System}
+When a block is read from the disk the file system makes the assumption that the data following that block is going to be read in the near future. 
+Thus, when a block is read, some number of subsequent blocks are cached so that when the application reads these blocks they can be returned much faster than going out to disk. 
+The experiment randomly chose a block to read from the first one thousand blocks of the file. 
+It then slept for one second in order to allow for all the prefetched data to be put into the cache. 
+It then sequentially read the blocks following the initial block and timed how long it took for that block to be read. 
+Blocks in the cache should be returned very quickly. 
+A long read time for a block indicates that the file system had to go out to disk in order to retrieve it. 
+Along with retrieval of that block the file system would again prefetch data. 
+Therefore the expected timing distribution was a consistent number of fast reads (blocks in the cache) separated by spikes indicating the file system had to go out to the disk. 
+The number of blocks from one spike to the next revealed the size of the prefetch.
+
+\subsection{Measuring the Cache Size}
+The cache allows the file system to keep recently accessed (and potentially soon to be accessed due to prefetching) data in memory. 
+By not having to go out to disk on a request it speeds up the retrieval time immensely. 
+The size of the cache is affected by the amount of free physical memory in the system. 
+Both the bare metal system as well as the virtual machine had 6 GB of memory and no extra applications running. 
+Although, there is a source of noise in that operating system processes were running at the time of the experiments, thus taking up some amount of memory. 
+The experiments were run in a consistent environment in order to try and control the noise as much as possible. 
+With 6 GB of memory it was expected that the cache would take up the majority of the free space and have a size near 5 GB. 
+This was tested by doing repeated reads to the same blocks of data. 
+Blocks in the cache have very fast read times. 
+Once the amount of data being read is too large to fit inside the cache, the read times increase as the file system has to continually go out to disk due to cache misses. 
+Prefetching was controlled by reading all the desired blocks initially without timing to allow for the data to be placed in the cache. 
+Then, the same data was read again while being timed. 
+All individual reads were of block size in order to avoid allocating large amounts of space on the heap and unnecessarily consuming memory.
+
 \subsection{Inode Indirection}
+%% TODO once we figure out what is going on here
+
 
 \section{Results}
 Rob will get this.
