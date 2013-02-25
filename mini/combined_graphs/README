@@ -1,0 +1,5 @@
+Make sure you run ./make_graphs from the bare/<test type> and virt/<test type> directories
+respectively before doing this. Make a symbolic link of ./make_graphs.sh to each of those directories,
+have the correct export.gp in them, run them, and then run the combined graph .gp file in this directory.
+
+See the /random tests for and example, since it's done for those already.
