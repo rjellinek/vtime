@@ -61,12 +61,49 @@ always be attached to the word that preceded it, instead of going to the
 next line.
 
 In recent years large and small businesses have demanded cost effective ways of increasing their computing power.
-This has led to the proliferation of virtualization.
+This has led to the proliferation of full hardware virtualization.
 Virtualizing computing resources has revolutionized the current environment in two distinct ways.
-It has produced new business models where large companies lease their...
-Virtualizing computing resources has not only brought about new business models, such as EC2 or Azure, but has also revolutionized how existing businesses utilize their current systems.
-This has led to two options, either using virtualization to fully utilize their existing systems or purchase time from large virtualized datacenters like amazon EC2 or Microsoft Azure.
+It has allowed companies to fully utilize their current systems by combining many machines onto a single physical system.
+It has also produced new business models where companies flexibly rent computing time to customers who can pay for only what they need.
 
+\paragraph{}
+In order to run unaltered commodity operating systems, the virtual machine monitor must fully virtualize the system's underlying hardware.
+This leads to the question of what happens when software that assumes it is running directly on bare hardware is run in a virtualized environment?
+Therefore, we studied the effects of virtualization on the ext2 file system.
+We studied four specific characteristics of ext2, comparing its performance when running on bare metal and when running in a virtual machine.
+
+\paragraph {}
+The first characteristic that was measured was the ideal buffer size when randomly reading from a file. 
+Random reads can be very costly since in the common case, the desired data will not be in the cache. 
+Knowing the amount of data that can be retrieved for the lowest cost allows the user to extract the highest performance out of the file system when creating applications with large amounts of random reads. 
+The experiment tested different buffer lengths at different increments. 
+It was determined that for both bare metal and virtual, buffers under 4096 bytes in size perform similarly when randomly reading from a file. 
+Buffers over 4096 bytes in size require an increase in cycles to read all the data. 
+This buffer size represents the block size for the file system. 
+When ext2 reads and writes to disk it does so at the block level.
+Blocks are a foundational element in file system and this value is significant because it is then used in all other file system measurements.
+
+\paragraph{}
+The second characteristic measured was the amount of data prefetched by the file system. 
+When reading from a disk, the file system assumes the user will most likely read data sequentially. 
+In order to increase performance for this common case the file system reads extra blocks that are located after the requested data. 
+This is useful because it allows the user to read sequentially without constantly paying the penalty for having to go out to disk. 
+Again, the experiment yielded results indicating that ext2 behaves similarily in both environments, prefetching 128 KB of data whenever a block is read from disk.
+
+\paragraph{}
+The third characteristic measured was the size of the file system cache. 
+This is particularly important to the user since it indicates the amount of data that they can access without incurring large delays. 
+It is not a uniform characteristic across all instances of ext2 since the size is related to the amount of free memory in the system. 
+%% TODO New values for thisi, compare virt and bare --  The experiment was run on a system containing 4 GB of memory resulting in a cache size of about 3.3 GB.
+
+\paragraph{}
+The final characteristic measured was the file size at which ext2 requires indirection to store data. 
+Since ext2 uses inodes to organize data on disk, the number of pointers in the inode that directly reference data determines the largest file size before needing to use indirection. 
+Then, extra layers of indirection are used as the file size increases. 
+Ext2 implements three levels of indirection which allows for file sizes up to 2 TB (depending on the block size). 
+The experiment showed that ext2 uses twelve direct inodes. 
+Therefore, an inodes can directly reference a file of up to 48 KB. 
+%% TODO compare virt and bare
 
 \section{Methodology}
 \subsection{Environment}
