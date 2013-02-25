@@ -20,7 +20,15 @@ def main(root, output_dir):
             continue
         with open(os.path.join(root,fname), 'r') as fp:
             for line in fp.readlines():
-                x, y = line.split(' ')
+                try:
+                    # Necessary to do it this way because of 
+                    # extra spaces up front.
+                    vals = line.split(' ')
+                    x, y = vals[-2], vals[-1]
+                except:
+                    print '**%s**' % line
+                    print os.path.join(root,fname)
+                    raise
 
                 alldata += '%s %s' % (x,y)
                 

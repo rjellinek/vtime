@@ -1,13 +1,34 @@
 #!/usr/bin/gnuplot
 
+# Plot averages
 reset
 set terminal png
+set output 'avg_runs.png'
 
-set xlabel "Blocks Written"
-set ylabel "Time (milli seconds)"
-set title "Measuring What File Size Causes Indirection"
+set xlabel "Bytes Read"
+set ylabel "Read Time (usec)"
+set title "Measuring Inode Indirection on Bare Metal: Average Read Times"
 
-set grid
+#set yrange [0:400]
+#set xtics 32
+
 unset key
+set grid
 
-plot "results/combined" using 1:2
+plot "avg_runs.dat" using 1:2 w lines title 'avg_runs'
+
+
+# Plot combined scatter plot
+reset
+set terminal png
+set output 'combined_runs.png'
+#set logscale y
+set autoscale x
+
+set xlabel "Bytes Read"
+set ylabel "Read Time (usec)"
+set title "Measuring Inode Indirection on Bare Metal: Combined Read Times"
+
+unset key
+set grid
+plot "combined_runs.dat" using 1:2 w points title 'combined_runs'

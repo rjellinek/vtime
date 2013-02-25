@@ -5,9 +5,9 @@ set terminal png
 set output 'random_avg.png'
 
 set xlabel "Bytes Read"
-set ylabel "Time (usec)"
+set ylabel "Read Time (usec)"
 set yrange [0:400]
-set title "Average Read Times For Various Byte Amounts on Bare Metal (n=18)"
+set title "Measuring Ideal Random Read Buffer Size: Average Read Times (n=18)"
 
 set grid
 set style line 1 lt 2 lc rgb "blue" lw 3
