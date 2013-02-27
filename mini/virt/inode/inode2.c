@@ -37,7 +37,7 @@ main(int argc, const char *argv[]){
 	// file to output the results
 	char result_filename[14];
 	sprintf(result_filename, "results/run%d", atoi(argv[1]));
-	int results = open(result_filename, O_CREAT | O_RDWR, 0644);
+	int results = open(result_filename, O_CREAT | O_TRUNC | O_RDWR, 0644);
 	int rdfd = open("/dev/urandom", O_RDONLY);
     int wrfd = open("./outfile", O_CREAT | O_TRUNC | O_WRONLY | O_DIRECT, 0644);
     int scratchfd = open("./scratch", O_CREAT | O_TRUNC | O_WRONLY | O_DIRECT, 0644);

@@ -9,7 +9,7 @@ def parse_command_line():
 
 def main(argv=None):
 	args = parse_command_line()
-	iterations = 1000
+	iterations = 50
 	# number to start results output from, runX
 	# run1, run2, run3, etc...
 	initial = int(args.file_number) 
