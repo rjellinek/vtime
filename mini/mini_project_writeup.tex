@@ -52,14 +52,6 @@
 
 \section{Introduction}
 
-Features\endnote{Remember to use endnotes, not footnotes!} galore, plethora of promises.\\
-
-Now we're going to cite somebody.  Watch for the cite tag.
-Here it comes~\cite{Chaum1981,Diffie1976}.  The tilde character (\~{})
-in the source means a non-breaking space.  This way, your reference will
-always be attached to the word that preceded it, instead of going to the
-next line.
-
 In recent years large and small businesses have demanded cost effective ways of increasing their computing power.
 This has led to the proliferation of full hardware virtualization.
 Virtualizing computing resources has revolutionized the current environment in two distinct ways.
@@ -158,8 +150,9 @@ The number of blocks from one spike to the next revealed the size of the prefetc
 The cache allows the file system to keep recently accessed (and potentially soon to be accessed due to prefetching) data in memory. 
 By not having to go out to disk on a request it speeds up the retrieval time immensely. 
 The size of the cache is affected by the amount of free physical memory in the system. 
-Both the bare metal system as well as the virtual machine had 6 GB of memory and no extra applications running. 
-Although, there is a source of noise in that operating system processes were running at the time of the experiments, thus taking up some amount of memory. 
+The system we used for our experiments typically had two 6GB DIMMs. In order to speed up test times and to provide a similar environment for the native and virtual settings, we removed a DIMM for our native tests, so that the native machine was running on a total of 6GB of physical memory. In our VM-based tests, we inserted both DIMMs so that the machine had 12GB of physical memory, but only made 6GB available to the virtual machine. Otherwise, with only one DIMM installed for the VM tests, we would have been unable to allocate the full 6GB to the guest VM.
+%Both the bare metal system as well as the virtual machine had 6 GB of memory and no extra applications running. 
+We also consider that there is a source of noise in that operating system processes were running at the time of the experiments, thus taking up some amount of memory.
 The experiments were run in a consistent environment in order to try and control the noise as much as possible. 
 With 6 GB of memory it was expected that the cache would take up the majority of the free space and have a size near 5 GB. 
 This was tested by doing repeated reads to the same blocks of data. 
@@ -174,10 +167,47 @@ All individual reads were of block size in order to avoid allocating large amoun
 
 
 \section{Results}
-Rob will get this.
+
 \subsection{Buffer Size}
+\begin{figure}[!ht]
+\includegraphics[scale=.35]{random_avg.png}
+\caption{Ideal buffer size for random file access: average read times}
+\end{figure}
+\begin{figure}[!ht]
+\includegraphics[scale=.35]{random_combined.png}
+\caption{Ideal buffer size for random file access: combined read times}
+\end{figure}
+
+When reading 512-byte blocks in reverse starting from a random point in our target file on ext2, read times jumped on 4096-byte boundaries. On bare metal, average read times jumped from approximately 0.5 microseconds when the read happened within a 4k block, to 200-250 microseconds for the first read into a new 4k block. Under QEMU-KVM, read times within a block  took approximately 0.75 microseconds and jumped to 300-400 microseconds for the first read into a new 4k block.  
+
+This is consistent with our hypothesis that read times would spike on the first read into a new block but remain low otherwise. Since ext2 defines a block size as 4096 bytes, the first read into a new block fetches the block from disk into memory; all subsequent reads from that block can be done directly from memory, and so are much quicker.
+
+The consistency is spikes, but relative difference in latency between our bare-metal and QEMU-KVM tests are also consistent with our expectations. Virtio implements virtual queues that serve as an interface between a set of front-end drivers in QEMU, and back-end drivers in the KVM hypervisor. I/O requests and responses are passed between guest and host first via the virtio-blk device driver and then through these queues to the hypervisor, where the actual I/O request is then made and the result is returned to the guest. The additional time required to transfer the I/O request and response would explain the higher response time observed under QEMU-KVM when compared with bare metal. In particular, the greater relative slowdown when a block is newly fetched from disk (~100 microsecond difference between bare metal and VM), compared with when data is fetched from memory (~0.25 microsecond slowdown for the VM) is in line with expectations. 
+
 \subsection{Prefetching}
+\begin{figure}[!ht]
+\includegraphics[scale=.35]{prefetch_avg.png}
+\caption{Measuring sequential reads to determine prefetching size: average read times}
+\end{figure}
+\begin{figure}[!ht]
+\includegraphics[scale=.35]{prefetch_combined.png}
+\caption{Measuring sequential reads to determine prefetching size: combined read times}
+\end{figure}
+Our results confirmed our hypothesis that read times would be fast for some set number of blocks corresponding to the number of blocks prefetched ahead on a sequential read, and would spike when the next set of blocks had to be read from disk. Our results show the high read times occur at 32-block intervals, indicating that ext2 prefetches 128k of data at a time. We found that read times rose to from approximately 1 microsecond to 500-600 microseconds on bare metal, and from approximately 1 microsecond to 150-400 microseconds on QEMU-KVM. 
+
+While the amount of data prefetched was consistent between the native and virtualized settings, the relative difference in the time it took to read from disk is very surprising. It is unclear why reading data from disk in the virtual setting would occur \textit{with lower latency} than when performing the same read in the native setting. 
+%% TODO: finish/clarify the above.
+
 \subsection{File Cache}
+\begin{figure}[!ht]
+\includegraphics[scale=.35]{cache_combined.png}
+\caption{Measuring file cache size: combined read times}
+\end{figure}
+Figure 5 shows the results from our cache-timing tests in the native and virtual settings. Both settings show very low read times for the first 5.3GB of data, implying that it fit in the file cache. We can assume that the remaining physical memory was consumed by background processes and kernel data structures. After the first 5.3GB, the read time for additional bytes skyrockets in the native setting, but remains relatively low in the virtual setting. This is most likely attributable to our experimental setup, where we had only one 6GB DIMM in the native setting, but two 6GB DIMMs in the virtual setting (though we only allocated the 6GB to the VM). 
+
+%TODO: Is the following correct or plausible? Potentially talking out my a**. Especially toward the end.
+In the native setting with 6GB of physical memory, assuming the file cache was 5.3GB and background processes and the kernel filled the remaining space, no additional files could be cached in physical memory past the 5.3GB mark. Reading additional files would require going to disk in each case, swapping out old data from the cache, and replacing it with the new data read, all of which is very expensive. In the VM setting, however, since we actually have 12GB of physical RAM, the VM will fill up its own file cache, which appears to be slightly larger than that from the native setting (probably because the bare linux installation in the VM had fewer modules/background processes loaded). But then when it tries to read an additional file, it is cached in the remaining free physical memory of the hypervisor--outside the 6GB visible to the guest VM, but accessible now only with the overhead required to swap the page in from the hypervisor's memory into the guest OS's memory. If read pages are shared, this may not even involve a swap, but only a page-table update. 
+
 \subsection{Inode Indirection}
 
 \section{Conclusions}
