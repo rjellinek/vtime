@@ -33,12 +33,12 @@ main(int argc, const char *argv[]){
 	double freq =  2.8 * pow(10.0, 9);
 
 	// file that needs to be open for writing to
-	int fd = open("creation", O_CREAT | O_WRONLY, 0644);
+	int fd = open("/media/48a48b22-9e99-40b7-9efd-21cfb34fb0c5/creation", O_CREAT | O_WRONLY, 0644);
 	
 	// file to output the results
 	char result_filename[14];
 	sprintf(result_filename, "results/run%d", atoi(argv[1]));
-	int results = open(result_filename, O_CREAT | O_RDWR, 0644);
+	int results = open(result_filename, O_CREAT | O_RDWR | O_TRUNC, 0644);
 
 	// loop through the buffer making it 4096 (1 block) long	
 /*	int k = 0;
