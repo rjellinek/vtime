@@ -39,8 +39,8 @@ main(int argc, const char *argv[]){
 	sprintf(result_filename, "results/run%d", atoi(argv[1]));
 	int results = open(result_filename, O_CREAT | O_RDWR, 0644);
 	int rdfd = open("/dev/urandom", O_RDONLY);
-    int wrfd = open("./outfile", O_CREAT | O_TRUNC | O_WRONLY | O_DIRECT, 0644);
-    int scratchfd = open("./scratch", O_CREAT | O_TRUNC | O_WRONLY | O_DIRECT, 0644);
+    int wrfd = open("/media/48a48b22-9e99-40b7-9efd-21cfb34fb0c5/outfile", O_CREAT | O_TRUNC | O_WRONLY | O_DIRECT, 0644);
+    int scratchfd = open("/media/48a48b22-9e99-40b7-9efd-21cfb34fb0c5/scratch", O_CREAT | O_TRUNC | O_WRONLY | O_DIRECT, 0644);
     //struct stat *statbuf = malloc(sizeof(struct stat));
     
 	int i, j;
