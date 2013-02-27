@@ -8,7 +8,7 @@ set output 'prefetch_combined.png'
 set autoscale x
 set yrange[0:1000]
 
-set xlabel "Bytes Read"
+set xlabel "Blocks Read"
 set ylabel "Read Time (usec)"
 set title "Measuring Prefetch Data Size: Combined Read Times (n=30)"
 

@@ -4,7 +4,7 @@
 set terminal png
 set output 'prefetch_avg.png'
 
-set xlabel "Bytes Read"
+set xlabel "Blocks Read"
 set ylabel "Read Time (usec)"
 #set yrange [0:400]
 set title "Measuring Prefetch Data Size: Average Read Times (n=30)"
