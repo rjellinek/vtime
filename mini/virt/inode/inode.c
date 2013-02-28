@@ -33,7 +33,7 @@ main(int argc, const char *argv[]){
 	double freq =  2.8 * pow(10.0, 9);
 
 	// file that needs to be open for writing to
-	int fd = open("/media/48a48b22-9e99-40b7-9efd-21cfb34fb0c5/creation", O_CREAT | O_WRONLY, 0644);
+	int fd = open("creation", O_CREAT | O_WRONLY, 0644);
 	
 	// file to output the results
 	char result_filename[14];
@@ -48,11 +48,10 @@ main(int argc, const char *argv[]){
 */
 
 	int data = open("../data", O_RDONLY);
+	read(data, buffer, SIZE);
 
 	int i = 0;
 	for(i; i < 16; i++){
-
-		read(data, buffer, SIZE);
 
 		tick_start = rdtsc();
 		write(fd, buffer, SIZE);
