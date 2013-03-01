@@ -66,8 +66,6 @@ We studied four specific characteristics of ext2, comparing its performance when
 
 \paragraph {}
 The first characteristic that was measured was the ideal buffer size when randomly reading from a file. 
-Random reads can be very costly since in the common case, the desired data will not be in the cache. 
-Knowing the amount of data that can be retrieved for the lowest cost allows the user to extract the highest performance out of the file system when creating applications with large amounts of random reads. 
 The experiment tested different buffer lengths at different increments. 
 It was determined that for both bare metal and virtual, buffers under 4096 bytes in size perform similarly when randomly reading from a file. 
 Buffers over 4096 bytes in size require an increase in cycles to read all the data. 
@@ -86,16 +84,18 @@ Again, the experiment yielded results indicating that ext2 behaves similarily in
 The third characteristic measured was the size of the file system cache. 
 This is particularly important to the user since it indicates the amount of data that they can access without incurring large delays. 
 It is not a uniform characteristic across all instances of ext2 since the size is related to the amount of free memory in the system. 
-%% TODO New values for thisi, compare virt and bare --  The experiment was run on a system containing 4 GB of memory resulting in a cache size of about 3.3 GB.
+In both the bare metal and virtual environments our experiments showed a file cache of about 5.3 GB.
 
 \paragraph{}
 The final characteristic measured was the file size at which ext2 requires indirection to store data. 
-Since ext2 uses inodes to organize data on disk, the number of pointers in the inode that directly reference data determines the largest file size before needing to use indirection. 
+Since ext2 uses inodes to organize data on disk, the number of data blocks that an inode directly references determines the largest size a file can be before needing to use indirection. 
+Ext2 allows for a handful of data blocks to be directly referenced by the first layer of inodes. 
 Then, extra layers of indirection are used as the file size increases. 
-Ext2 implements three levels of indirection which allows for file sizes up to 2 TB (depending on the block size). 
-The experiment showed that ext2 uses twelve direct inodes. 
-Therefore, an inodes can directly reference a file of up to 48 KB. 
-%% TODO compare virt and bare
+It implements three levels of indirection which allows for file sizes up to 2 TB (depending on the block size). 
+The experiments showed that ext2 on bare metal uses twelve direct inodes. 
+The experiments in the virtual environment also indicated the same number of direct blocks, although we encountered considerable amount noise when operating inside the VM.  
+Therefore, an inode can directly reference a file of up to 48 KB.
+
 
 \section{Methodology}
 \subsection{Environment}
@@ -132,7 +132,8 @@ Once the file system needs to read from a new block it will have to fetch that b
 Therefore, when the read time increases significantly it is the start of a new block.
 Reads were started from a block chosen randomly within the first 1000 blocks of the file and were done in reverse order to counteract prefetching. 
 Since the default page size for the Linux kernel is 4 KB, it is logical that the file system make this its basic unit for moving data. 
-Therefore we expected the ext2 block size to be 4096 bytes.
+Therefore we expected the ext2 block size for both the bare metal and virtual environments to be 4096 bytes.
+While we expected the block size to be the same we also expected the virtual machine to incur some amount of delay compared to bare metal as a result of having to interact with the hypervisor.
 
 \subsection{Measuring the Amount of Data Prefetched by the File System}
 When a block is read from the disk the file system makes the assumption that the data following that block is going to be read in the near future. 
@@ -145,27 +146,27 @@ A long read time for a block indicates that the file system had to go out to dis
 Along with retrieval of that block the file system would again prefetch data. 
 Therefore the expected timing distribution was a consistent number of fast reads (blocks in the cache) separated by spikes indicating the file system had to go out to the disk. 
 The number of blocks from one spike to the next revealed the size of the prefetch.
+Again, we expect both the bare metal and virtual machines to prefetch the same amount of data with the virtual machine taking some amount of time longer to process the prefetch.
 
 \subsection{Measuring the Cache Size}
 The cache allows the file system to keep recently accessed (and potentially soon to be accessed due to prefetching) data in memory. 
 By not having to go out to disk on a request it speeds up the retrieval time immensely. 
 The size of the cache is affected by the amount of free physical memory in the system. 
-The system we used for our experiments typically had two 6GB DIMMs. In order to speed up test times and to provide a similar environment for the native and virtual settings, we removed a DIMM for our native tests, so that the native machine was running on a total of 6GB of physical memory. In our VM-based tests, we inserted both DIMMs so that the machine had 12GB of physical memory, but only made 6GB available to the virtual machine. Otherwise, with only one DIMM installed for the VM tests, we would have been unable to allocate the full 6GB to the guest VM.
-%Both the bare metal system as well as the virtual machine had 6 GB of memory and no extra applications running. 
+The system we used for our experiments had two 6GB DIMMs. 
+In order to speed up test times and to provide a similar environment for the native and virtual settings, we removed a DIMM for our native tests, so that the native machine was running on a total of 6GB of physical memory. 
+In our VM-based tests, we inserted both DIMMs so that the machine had 12GB of physical memory, but only made 6GB available to the virtual machine. 
+Otherwise, with only one DIMM installed for the VM tests, we would have been unable to allocate the full 6GB to the guest VM.
 We also consider that there is a source of noise in that operating system processes were running at the time of the experiments, thus taking up some amount of memory.
 The experiments were run in a consistent environment in order to try and control the noise as much as possible. 
 With 6 GB of memory it was expected that the cache would take up the majority of the free space and have a size near 5 GB. 
-This was tested by doing repeated reads to the same blocks of data. 
-Blocks in the cache have very fast read times. 
-Once the amount of data being read is too large to fit inside the cache, the read times increase as the file system has to continually go out to disk due to cache misses. 
 Prefetching was controlled by reading all the desired blocks initially without timing to allow for the data to be placed in the cache. 
 Then, the same data was read again while being timed. 
+Once the amount of data being read is too large to fit inside the cache, the read times dramatically increase as the file system has to continually go out to disk due to cache misses. 
 All individual reads were of block size in order to avoid allocating large amounts of space on the heap and unnecessarily consuming memory.
+Since both machines were equipped with 6 GB of memory we expected the file cache to grow to around 5 GB.
 
 \subsection{Inode Indirection}
 %% TODO once we figure out what is going on here
-
-
 \section{Results}
 
 \subsection{Buffer Size}
