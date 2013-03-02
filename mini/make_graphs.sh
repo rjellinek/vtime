@@ -9,6 +9,6 @@
 ## gnuplot graphs.
 
 dir=`pwd`
-../../average_runs.py "$dir/results_iostat" $dir
+../../average_runs.py "$dir/results_native" $dir
 gnuplot export.gp
 eog avg_runs.png

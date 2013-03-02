@@ -4,9 +4,9 @@
 set terminal png
 set output 'inode_avg.png'
 
-set xlabel "Bytes Read"
-set ylabel "Read Time (usec)"
-set title "Measuring Inode Indirection: Average Read Times"
+set xlabel "Bytes Written"
+set ylabel "Written Time (usec)"
+set title "Measuring Inode Indirection: Average Write Times"
 
 #set yrange [0:400]
 
