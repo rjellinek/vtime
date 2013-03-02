@@ -6,7 +6,7 @@ set output 'prefetch_avg.png'
 
 set xlabel "Number of 4k Blocks Read"
 set ylabel "Read Time (usec)"
-set yrange [0:800]
+set yrange [0:1400]
 set title "Measuring Prefetch Data Size: Average Read Times (n=30)"
 
 set grid

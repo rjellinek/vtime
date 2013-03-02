@@ -47,8 +47,8 @@
 % Comment it out when you first submit the paper for review.
 \thispagestyle{empty}
 
-
 \subsection*{Abstract}
+In this paper, we peform experiments to determine four characteristics of the ext2 file system in both a native Ubuntu 12.04 setting, and on a virtual machine using QEMU-KVM with virtio and running Ubuntu 12.04 as a guest. The experiments aim to determine the ideal buffer size for random file access, the amount of data prefetched by the filesystem during a sequential read, the size of the file cache, and the file size above which the filesystem adds a layer of indirection. We show that the ideal buffer size for random file access is 4096 bytes, that ext2 prefetches 128kb of data, that the file cache on a 6GB disk is roughly 5.3 GB, and that ext2 adds a layer of indirection for files greater than 48kb. While our experimental results in the native and virtual settings were in agreement, the read and write latency on the virtual machine was almost always longer than in the native setting.
 
 \section{Introduction}
 
@@ -58,14 +58,14 @@ Virtualizing computing resources has revolutionized the current environment in t
 It has allowed companies to fully utilize their current systems by combining many machines onto a single physical system.
 It has also produced new business models where companies flexibly rent computing time to customers who can pay for only what they need.
 
-\paragraph{}
 In order to run unaltered commodity operating systems, the virtual machine monitor must fully virtualize the system's underlying hardware.
 This leads to the question of what happens when software that assumes it is running directly on bare hardware is run in a virtualized environment?
 Therefore, we studied the effects of virtualization on the ext2 file system.
 We studied four specific characteristics of ext2, comparing its performance when running on bare metal and when running in a virtual machine.
 
-\paragraph {}
 The first characteristic that was measured was the ideal buffer size when randomly reading from a file. 
+Random reads can be very costly since in the common case, the desired data will not be in the cache. 
+Knowing the amount of data that can be retrieved for the lowest cost allows the user to extract the highest performance out of the file system when creating applications with large amounts of random reads. 
 The experiment tested different buffer lengths at different increments. 
 It was determined that for both bare metal and virtual, buffers under 4096 bytes in size perform similarly when randomly reading from a file. 
 Buffers over 4096 bytes in size require an increase in cycles to read all the data. 
@@ -73,29 +73,24 @@ This buffer size represents the block size for the file system.
 When ext2 reads and writes to disk it does so at the block level.
 Blocks are a foundational element in file system and this value is significant because it is then used in all other file system measurements.
 
-\paragraph{}
 The second characteristic measured was the amount of data prefetched by the file system. 
 When reading from a disk, the file system assumes the user will most likely read data sequentially. 
 In order to increase performance for this common case the file system reads extra blocks that are located after the requested data. 
 This is useful because it allows the user to read sequentially without constantly paying the penalty for having to go out to disk. 
 Again, the experiment yielded results indicating that ext2 behaves similarily in both environments, prefetching 128 KB of data whenever a block is read from disk.
 
-\paragraph{}
 The third characteristic measured was the size of the file system cache. 
 This is particularly important to the user since it indicates the amount of data that they can access without incurring large delays. 
 It is not a uniform characteristic across all instances of ext2 since the size is related to the amount of free memory in the system. 
-In both the bare metal and virtual environments our experiments showed a file cache of about 5.3 GB.
+%% TODO New values for thisi, compare virt and bare --  The experiment was run on a system containing 4 GB of memory resulting in a cache size of about 3.3 GB.
 
-\paragraph{}
 The final characteristic measured was the file size at which ext2 requires indirection to store data. 
-Since ext2 uses inodes to organize data on disk, the number of data blocks that an inode directly references determines the largest size a file can be before needing to use indirection. 
-Ext2 allows for a handful of data blocks to be directly referenced by the first layer of inodes. 
+Since ext2 uses inodes to organize data on disk, the number of pointers in the inode that directly reference data determines the largest file size before needing to use indirection. 
 Then, extra layers of indirection are used as the file size increases. 
-It implements three levels of indirection which allows for file sizes up to 2 TB (depending on the block size). 
-The experiments showed that ext2 on bare metal uses twelve direct inodes. 
-The experiments in the virtual environment also indicated the same number of direct blocks, although we encountered considerable amount noise when operating inside the VM.  
-Therefore, an inode can directly reference a file of up to 48 KB.
-
+Ext2 implements three levels of indirection which allows for file sizes up to 2 TB (depending on the block size). 
+The experiment showed that ext2 uses twelve direct inodes. 
+Therefore, an inodes can directly reference a file of up to 48 KB. 
+%% TODO compare virt and bare
 
 \section{Methodology}
 \subsection{Environment}
@@ -113,7 +108,6 @@ The Caviar Green family of disks adjusts the speed of the drive in order to save
 This power saving mode goes into effect after eight seconds of inactivity.
 The first run of every experiement was used to "wake up" the drive and was subsequently thrown out due to needing "spin-up" time. 
 
-\paragraph{}
 The timer used for all experiments was the time stamp counter which was accessed through the rdtsc instruction provided by the Intel instruction set. 
 This is called in C by designating the command as assembly. 
 The command allows access to the cycle count which was used to determine how many cycles it took for an operation to complete. 
@@ -132,8 +126,7 @@ Once the file system needs to read from a new block it will have to fetch that b
 Therefore, when the read time increases significantly it is the start of a new block.
 Reads were started from a block chosen randomly within the first 1000 blocks of the file and were done in reverse order to counteract prefetching. 
 Since the default page size for the Linux kernel is 4 KB, it is logical that the file system make this its basic unit for moving data. 
-Therefore we expected the ext2 block size for both the bare metal and virtual environments to be 4096 bytes.
-While we expected the block size to be the same we also expected the virtual machine to incur some amount of delay compared to bare metal as a result of having to interact with the hypervisor.
+Therefore we expected the ext2 block size to be 4096 bytes.
 
 \subsection{Measuring the Amount of Data Prefetched by the File System}
 When a block is read from the disk the file system makes the assumption that the data following that block is going to be read in the near future. 
@@ -146,33 +139,33 @@ A long read time for a block indicates that the file system had to go out to dis
 Along with retrieval of that block the file system would again prefetch data. 
 Therefore the expected timing distribution was a consistent number of fast reads (blocks in the cache) separated by spikes indicating the file system had to go out to the disk. 
 The number of blocks from one spike to the next revealed the size of the prefetch.
-Again, we expect both the bare metal and virtual machines to prefetch the same amount of data with the virtual machine taking some amount of time longer to process the prefetch.
 
 \subsection{Measuring the Cache Size}
 The cache allows the file system to keep recently accessed (and potentially soon to be accessed due to prefetching) data in memory. 
 By not having to go out to disk on a request it speeds up the retrieval time immensely. 
 The size of the cache is affected by the amount of free physical memory in the system. 
-The system we used for our experiments had two 6GB DIMMs. 
-In order to speed up test times and to provide a similar environment for the native and virtual settings, we removed a DIMM for our native tests, so that the native machine was running on a total of 6GB of physical memory. 
-In our VM-based tests, we inserted both DIMMs so that the machine had 12GB of physical memory, but only made 6GB available to the virtual machine. 
-Otherwise, with only one DIMM installed for the VM tests, we would have been unable to allocate the full 6GB to the guest VM.
+The system we used for our experiments typically had two 6GB DIMMs. In order to speed up test times and to provide a similar environment for the native and virtual settings, we removed a DIMM for our native tests, so that the native machine was running on a total of 6GB of physical memory. In our VM-based tests, we inserted both DIMMs so that the machine had 12GB of physical memory, but only made 6GB available to the virtual machine. Otherwise, with only one DIMM installed for the VM tests, we would have been unable to allocate the full 6GB to the guest VM.
+%Both the bare metal system as well as the virtual machine had 6 GB of memory and no extra applications running. 
 We also consider that there is a source of noise in that operating system processes were running at the time of the experiments, thus taking up some amount of memory.
 The experiments were run in a consistent environment in order to try and control the noise as much as possible. 
 With 6 GB of memory it was expected that the cache would take up the majority of the free space and have a size near 5 GB. 
+This was tested by doing repeated reads to the same blocks of data. 
+Blocks in the cache have very fast read times. 
+Once the amount of data being read is too large to fit inside the cache, the read times increase as the file system has to continually go out to disk due to cache misses. 
 Prefetching was controlled by reading all the desired blocks initially without timing to allow for the data to be placed in the cache. 
 Then, the same data was read again while being timed. 
-Once the amount of data being read is too large to fit inside the cache, the read times dramatically increase as the file system has to continually go out to disk due to cache misses. 
 All individual reads were of block size in order to avoid allocating large amounts of space on the heap and unnecessarily consuming memory.
-Since both machines were equipped with 6 GB of memory we expected the file cache to grow to around 5 GB.
 
 \subsection{Inode Indirection}
 %% TODO once we figure out what is going on here
+
+
 \section{Results}
 
 \subsection{Buffer Size}
 \begin{figure}[!ht]
 \includegraphics[scale=.35]{random_avg.png}
-\caption{Ideal buffer size for random file access: average read times}
+\caption{Ideal buffer size for random file access: average read times. Reads take longer on 4096-byte boundaries, indicating that this is the size of a block, and is the optimal buffer size for random reads.}
 \end{figure}
 \begin{figure}[!ht]
 \includegraphics[scale=.35]{random_combined.png}
@@ -183,40 +176,54 @@ When reading 512-byte blocks in reverse starting from a random point in our targ
 
 This is consistent with our hypothesis that read times would spike on the first read into a new block but remain low otherwise. Since ext2 defines a block size as 4096 bytes, the first read into a new block fetches the block from disk into memory; all subsequent reads from that block can be done directly from memory, and so are much quicker.
 
-The consistency is spikes, but relative difference in latency between our bare-metal and QEMU-KVM tests are also consistent with our expectations. Virtio implements virtual queues that serve as an interface between a set of front-end drivers in QEMU, and back-end drivers in the KVM hypervisor. I/O requests and responses are passed between guest and host first via the virtio-blk device driver and then through these queues to the hypervisor, where the actual I/O request is then made and the result is returned to the guest. The additional time required to transfer the I/O request and response would explain the higher response time observed under QEMU-KVM when compared with bare metal. In particular, the greater relative slowdown when a block is newly fetched from disk (~100 microsecond difference between bare metal and VM), compared with when data is fetched from memory (~0.25 microsecond slowdown for the VM) is in line with expectations. 
+The consistency in spikes but relative difference in latency between our bare-metal and QEMU-KVM tests are also consistent with our expectations. Virtio implements virtual queues that serve as an interface between a set of front-end drivers in QEMU, and back-end drivers in the KVM hypervisor. I/O requests and responses are passed between guest and host first via the virtio-blk device driver and then through these queues to the hypervisor, where the actual I/O request is then made and the result is returned to the guest. The additional time required to transfer the I/O request and response would explain the higher response time observed under QEMU-KVM when compared with bare metal. In particular, the greater relative slowdown when a block is newly fetched from disk (~100 microsecond difference between bare metal and VM), compared with when data is fetched from memory (~0.25 microsecond slowdown for the VM) is in line with expectations. 
 
 \subsection{Prefetching}
 \begin{figure}[!ht]
-\includegraphics[scale=.35]{prefetch_avg.png}
-\caption{Measuring sequential reads to determine prefetching size: average read times}
-\end{figure}
-\begin{figure}[!ht]
 \includegraphics[scale=.35]{prefetch_combined.png}
-\caption{Measuring sequential reads to determine prefetching size: combined read times}
+\caption{Measuring sequential reads to determine prefetching size: combined read times. Read latency spiked every 32 blocks, indicating that ext2 prefetches 128kb of data.}
+\label{fig:prefetch_combined}
 \end{figure}
-Our results confirmed our hypothesis that read times would be fast for some set number of blocks corresponding to the number of blocks prefetched ahead on a sequential read, and would spike when the next set of blocks had to be read from disk. Our results show the high read times occur at 32-block intervals, indicating that ext2 prefetches 128k of data at a time. We found that read times rose to from approximately 1 microsecond to 500-600 microseconds on bare metal, and from approximately 1 microsecond to 150-400 microseconds on QEMU-KVM. 
+Our results in Figure \ref{fig:prefetch_combined} confirmed our hypothesis that read times on a sequential read would be fast over some set number of blocks, indicating that those blocks were resident in memory due to prefetching, and would spike when the next set of blocks had to be read from disk. Our results show that the high read times occur at 32-block intervals, indicating that ext2 prefetches 128k of data at a time. 
 
-While the amount of data prefetched was consistent between the native and virtualized settings, the relative difference in the time it took to read from disk is very surprising. It is unclear why reading data from disk in the virtual setting would occur \textit{with lower latency} than when performing the same read in the native setting. 
-%% TODO: finish/clarify the above.
+Read times from memory were roughly 1 microsecond in both the native and virtual settings, and jumped to approximately 600 microseconds in both settings, though the highest read latencies observed were on the VM. This makes sense, since all else being equal (in particular, assuming the virtualization layer is not doing any additional prefetching itself), reading from disk should take slightly longer for the VM due to the overhead added by virtio, as discussed in the previous section.
+
 
 \subsection{File Cache}
 \begin{figure}[!ht]
 \includegraphics[scale=.35]{cache_combined.png}
-\caption{Measuring file cache size: combined read times}
+\caption{Measuring file cache size: combined read times. ext2 grows the file cache to fill available physical memory, and shrinks as more memory is used. On our 6GB of total physical memory, roughly 5.3GB was available for the file cache.}
+\label{fig:file_cache}
 \end{figure}
-Figure 5 shows the results from our cache-timing tests in the native and virtual settings. Both settings show very low read times for the first 5.3GB of data, implying that it fit in the file cache. We can assume that the remaining physical memory was consumed by background processes and kernel data structures. After the first 5.3GB, the read time for additional bytes skyrockets in the native setting, but remains relatively low in the virtual setting. This is most likely attributable to our experimental setup, where we had only one 6GB DIMM in the native setting, but two 6GB DIMMs in the virtual setting (though we only allocated the 6GB to the VM). 
+Figure \ref{fig:file_cache} shows the results from our cache-timing tests in the native and virtual settings. Both settings show very low read times for the first 5.3GB of data, implying that it fit in the file cache. We can assume that the remaining physical memory was consumed by background processes and kernel data structures. After the first 5.3GB, the read time for additional bytes skyrockets in the native setting, but remains relatively low in the virtual setting. This is most likely attributable to our experimental setup, where we had only one 6GB DIMM in the native setting, but two 6GB DIMMs in the virtual setting (though we only allocated the 6GB to the VM). 
 
 %TODO: Is the following correct or plausible? Potentially talking out my a**. Especially toward the end.
-In the native setting with 6GB of physical memory, assuming the file cache was 5.3GB and background processes and the kernel filled the remaining space, no additional files could be cached in physical memory past the 5.3GB mark. Reading additional files would require going to disk in each case, swapping out old data from the cache, and replacing it with the new data read, all of which is very expensive. In the VM setting, however, since we actually have 12GB of physical RAM, the VM will fill up its own file cache, which appears to be slightly larger than that from the native setting (probably because the bare linux installation in the VM had fewer modules/background processes loaded). But then when it tries to read an additional file, it is cached in the remaining free physical memory of the hypervisor--outside the 6GB visible to the guest VM, but accessible now only with the overhead required to swap the page in from the hypervisor's memory into the guest OS's memory. If read pages are shared, this may not even involve a swap, but only a page-table update. 
+In the native setting with 6GB of physical memory, assuming the file cache was 5.3GB and background processes and the kernel filled the remaining space, no additional files could be cached in physical memory past the 5.3GB mark. This makes sense, as we know the size of the file cache is dependent on the amount of free physical memory in the system at the given time. In this case, it filled almost all the free physical memory. Reading additional files would require going to disk in each case, swapping out old data from the cache, and replacing it with the new data read, all of which is very expensive. In the VM setting, however, since we actually have 12GB of physical RAM, the VM will fill up its own file cache, which appears to be slightly larger than that from the native setting (probably because the bare linux installation in the VM had fewer modules/background processes loaded). But then when it tries to read an additional file, it is cached in the remaining free physical memory of the hypervisor--outside the 6GB visible to the guest VM, but accessible now only with the overhead required to swap the page in from the hypervisor's memory into the guest OS's memory. If read pages are shared, this may not even involve a swap, but only a page-table update. 
 
 \subsection{Inode Indirection}
+\begin{figure}[!ht]
+\includegraphics[scale=.35]{inode_avg.png}
+\caption{Measuring sequential write latency to determine inode indirection: average write times. The spike in write latency at the 13th data block implies that the first 12 blocks are pointed to from direct pointers, while the 13th block is pointed to from an indirect pointer, which takes additional time load and write.}
+\label{fig:inode_avg}
+\end{figure}
+\begin{figure}[!ht]
+\includegraphics[scale=.35]{inode_combined.png}
+\caption{Measuring sequential write latency to determine inode indirection: combined write times}
+\label{fig:inode_combined}
+\end{figure}
+An ext2 inode contains a number of direct pointers that point data blocks, followed by an indirect pointer that points to a data block that contains more direct pointers that point to data blocks. By timing sequential block-sized writes we can determine the number of direct pointers in the inode itself, since the write time for a data block that is referenced by following the indirect pointer and then another direct pointer should take longer than if the target data block can be immediately determined from a single direct pointer in the inode. 
+
+This pattern is visible in both the native and virtual environments as seen in the timings in Figures \ref{fig:inode_avg} and \ref{fig:inode_combined}. We see a spike in read times from roughly 5ms to 11ms on bare metal, and 8ms to 21ms on the VM, which indicates that there are 12 direct pointers in an ext2 inode, and the 13th is an indirect pointer. Writing the 13th data block means reading the inode, following the indirect pointer, reading the data block of direct pointers, following a direct pointer, and finally writing the desired data to a data block (plus writes to the inode to update modification time). This adds two operations to the \verb~write()~ over those performed using the first 12 direct pointers. Since each direct pointer points to a 4096-byte data block, the file system adds an additional layer of indirection for files over 48kb in size.
+
+As in our other experiments, the additional delay of the VM over the native setting makes sense given that the hypervisor has to perform the same write as in the native setting, and additionally incurs the overhead associated with processing the request through virtio.
 
 \section{Conclusions}
+The preceding experiments have demonstrated that the ideal buffer size for random file access is 4096 bytes (the size of a block in ext2), that ext2 prefetches 128kb of data, that the file cache on our 6GB of memory fills the remaining 5.3GB of free memory, and that ext2 adds a layer of indirection for files greater than 48kb. In general, reads and writes to disk in QEMU-KVM took longer than similar reads and writes on native Linux, which makes sense given that in the virtual setting the same reads and writes must happen at the hypervisor level as in native linux, but must also be passed between the hypervisor and guest via virtio's virtual queues. This communication must necessarily incur an overhead, which will be visible in timing experiments unless the virtualization layer employs additional techniques to minimize or amortize that overhead. In general, we realized how difficult it can be to get clean, consistent data in these timing experiments, which involves controlling for noise in the system (due to background processes), clearing the cache correctly, pinning the tests to a single CPU, and understanding any steps the virtualization layer might be taking that would affect timing. 
 
-{\footnotesize \bibliographystyle{acm}
-\bibliography{../common/bibliography}}
+%{\footnotesize \bibliographystyle{acm}
+%\bibliography{../common/bibliography}}
 
-\theendnotes
+%\theendnotes
 
 \end{document}
 
