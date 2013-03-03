@@ -231,6 +231,8 @@ Since both the bare metal and virtual machine are using ext2, and ext2's documen
 \end{verbatim}
 
 \section{Results}
+%% This is a hypothesis: should we include it?
+The following sections present our results for each of the four experiments. Note that in the buffer size and prefetching experiments, 
 
 \subsection{Buffer Size}
 \begin{figure}[!ht]
@@ -242,9 +244,7 @@ Since both the bare metal and virtual machine are using ext2, and ext2's documen
 \caption{Ideal buffer size for random file access: combined read times}
 \end{figure}
 
-When reading single bytes in reverse starting from a random point in our target file on ext2, read times jumped on 4096-byte boundaries. 
-On bare metal, average read times jumped from approximately 0.5 microseconds when the read happened within a 4 KB block, to 200-250 microseconds for the first read into a new 4 KB block. 
-Under QEMU-KVM, read times within a block took approximately 0.75 microseconds and jumped to 300-400 microseconds for the first read into a new 4 KB block.  
+When reading single bytes in reverse starting from a random point in our target file on ext2, read times jumped on 4096-byte boundaries. On bare metal, average read times jumped from approximately 0.5 microseconds when the read happened within a 4 KB block, to 200-250 microseconds for the first read into a new 4 KB block. Under QEMU-KVM, read times within a block took approximately 0.75 microseconds and jumped to 300-400 microseconds for the first read into a new 4 KB block. We notice that these read times--in the 200-400 microsecond range--are too fast to represent a disk read from an actual disk sector but too slow to represent a read from CPU cache or physical memory. This most likely indicates that there is I/O to disk, but that the disk is returning the data from an on-disk electronic cache, not actually doing a seek and read from a physical sector.
 
 This is consistent with our hypothesis that read times would spike on the first read into a new block but remain low otherwise. 
 Since ext2 defines a block size as 4096 bytes, the first read into a new block fetches the block from disk into memory; all subsequent reads from that block can be done directly from memory, and so are much quicker.
@@ -265,7 +265,7 @@ Our results in Figure \ref{fig:prefetch_combined} confirmed our hypothesis that 
 Our results show that the high read times occur at 32-block intervals, indicating that ext2 prefetches 128 KB of data at a time. 
 
 Read times from memory were roughly 1 microsecond in both the native and virtual settings, and jumped to approximately 600 microseconds in both settings, though the highest read latencies observed were on the VM. 
-This makes sense, since all else being equal (in particular, assuming the virtualization layer is not doing any additional prefetching itself), reading from disk should take slightly longer for the VM due to the overhead added by virtio, as discussed in the previous section.
+This makes sense, since all else being equal (in particular, assuming the virtualization layer is not doing any additional prefetching itself), reading from disk should take slightly longer for the VM due to the overhead added by virtio, as discussed in the previous section. Additionally, the 600 microsecond read times that represent ``going to disk'' most likely indicate that the disk is returning data from an on-disk electronic cache and not actually reading from a physical sector, similarly to our previous experiment.
 
 Initially our results indicated that the VM was able to prefetch much faster than the bare metal machine. 
 We used \texttt{iostat} to monitor the amount each machine had to go out to disk to complete our experiment. 
