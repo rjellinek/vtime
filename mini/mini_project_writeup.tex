@@ -104,8 +104,6 @@ The first run of every experiment was used to "wake up" the drive and was subseq
 
 The timer used for all experiments was the time stamp counter, accessed through the \texttt{rdtsc} instruction provided by the Intel instruction set. 
 The command allows access to the cycle count which was used to determine how many cycles it took for an operation to complete. 
-This does have the potential to introduce some noise since the CPU is not restricted to run at a fixed frequency. 
-Discarding the first run of every experiment helps minimize this inconsistency. 
 The timer was tested against the \texttt{gettimeofday()} function. 
 The test program slept for several seconds and both the time stamp counter and \texttt{gettimeofday()} determined the same amount of sleep time. 
 Although, each core in a multi-core processor has its own time stamp counter.
