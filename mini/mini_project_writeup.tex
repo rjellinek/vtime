@@ -81,7 +81,7 @@ Since ext2 uses inodes to organize data on disk, the number of pointers in the i
 Then, extra layers of indirection are used as the file size increases. 
 Ext2 implements three levels of indirection which allows for file sizes up to 2 TB (depending on the block size). 
 The experiment showed that in both settings ext2 uses twelve direct inodes. 
-Therefore, an inodes can directly reference a file of up to 48 KB. 
+Therefore, an inode can directly reference a file of up to 48 KB. 
 
 While the boundaries at which the file system operated were very similar in both environments, the virtual environment incurred extra delay in every experiment.
 This is not surprising due to the fact that all operations in the virtual environment had to go through a hypervisor.
@@ -142,7 +142,7 @@ When a block is read from the disk the file system makes the assumption that the
 Thus, when a block is read, some number of subsequent blocks are cached so that when the application reads these blocks they can be returned much faster than going out to disk. 
 The experiment randomly chose a block to read from the first 1000 blocks of the file. 
 It then slept for one second in order to allow for all the prefetched data to be put into the cache. 
-It then sequentially read the blocks following the initial block and timed how long it took for that block to be read. 
+This was followed by a timed sequential reading of the blocks following the initial block.
 Blocks in the cache should be returned very quickly. 
 A long read time for a block indicates that the file system had to go out to disk in order to retrieve it. 
 Along with retrieval of that block the file system would again prefetch data. 
@@ -229,8 +229,6 @@ Since both the bare metal and virtual machine are using ext2, and ext2's documen
 \end{verbatim}
 
 \section{Results}
-%% This is a hypothesis: should we include it?
-The following sections present our results for each of the four experiments. Note that in the buffer size and prefetching experiments, 
 
 \subsection{Buffer Size}
 \begin{figure}[!ht]
@@ -263,7 +261,7 @@ Our results in Figure \ref{fig:prefetch_combined} confirmed our hypothesis that 
 Our results show that the high read times occur at 32-block intervals, indicating that ext2 prefetches 128 KB of data at a time. 
 
 Read times from memory were roughly 1 microsecond in both the native and virtual settings, and jumped to approximately 600 microseconds in both settings, though the highest read latencies observed were on the VM. 
-This makes sense, since all else being equal (in particular, assuming the virtualization layer is not doing any additional prefetching itself), reading from disk should take slightly longer for the VM due to the overhead added by virtio, as discussed in the previous section. Additionally, the 600 microsecond read times that represent ``going to disk'' most likely indicate that the disk is returning data from an on-disk electronic cache and not actually reading from a physical sector, similarly to our previous experiment.
+This makes sense, since all else being equal (in particular, assuming the virtualization layer is not doing any additional prefetching itself), reading from disk should take slightly longer for the VM due to the overhead added by virtio, as discussed in the previous section. Additionally, the 600 microsecond read times that represent ``going to disk'' most likely indicate that the disk is returning data from an on-disk electronic cache and not actually reading from a physical sector, similar to our previous experiment.
 
 Initially our results indicated that the VM was able to prefetch much faster than the bare metal machine. 
 We used \texttt{iostat} to monitor the amount each machine had to go out to disk to complete our experiment. 
@@ -285,12 +283,12 @@ After the first 5.3 GB, the read time for additional bytes skyrockets in the nat
 This is most likely attributable to our experimental setup, where we had only one 6 GB DIMM in the native setting, but two 6 GB DIMMs in the virtual setting (though we only allocated the 6 GB to the VM). 
 
 %TODO: Is the following correct or plausible? Potentially talking out my a**. Especially toward the end.
-In the native setting with 6 GB of physical memory, assuming the file cache was 5.3 GB and background processes and the kernel filled the remaining space, no additional files could be cached in physical memory past the 5.3GB mark. 
+In the native setting with 6 GB of physical memory, assuming the file cache was 5.3 GB and background processes and the kernel filled the remaining space, no additional files could be cached in physical memory past the 5.3 GB mark. 
 This makes sense, as we know the size of the file cache is dependent on the amount of free physical memory in the system at the given time. 
 In this case, it filled almost all the free physical memory. 
 Reading additional files would require going to disk in each case, swapping out old data from the cache, and replacing it with the new data read, all of which is very expensive. 
 In the VM setting, however, since we actually have 12 GB of physical RAM, the VM will fill up its own file cache, which appears to be slightly larger than that from the native setting (probably because the bare Linux installation in the VM had fewer modules/background processes loaded). 
-But then when it tries to read an additional file, it is cached in the remaining free physical memory of the hypervisor--outside the 6GB visible to the guest VM, but accessible now only with the overhead required to swap the page in from the hypervisor's memory into the guest OS's memory. 
+But then when it tries to read an additional file, it is cached in the remaining free physical memory of the hypervisor--outside the 6 GB visible to the guest VM, but accessible now only with the overhead required to swap the page in from the hypervisor's memory into the guest OS's memory. 
 If read pages are shared, this may not even involve a swap, but only a page-table update. 
 
 \subsection{Inode Indirection}
